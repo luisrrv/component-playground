@@ -6,5 +6,6 @@ describe('App', () => {
   it('renders the shell', () => {
     const html = renderToString(<App />)
     expect(html).toContain('component-playground')
+    expect(html).toContain('preview')
   })
 })
