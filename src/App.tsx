@@ -6,7 +6,9 @@ import { useSandbox, type PreviewError, type PropsInfo } from './host/useSandbox
 export default function App() {
   const [source, setSource] = useState(EXAMPLES[0].code)
   const [propsText, setPropsText] = useState('')
-  const { frame, status, error, propsInfo, reset, hasRender } = useSandbox(source, propsText)
+  const [exampleId, setExampleId] = useState(EXAMPLES[0].id)
+  const { frame, frameKey, status, error, propsInfo, reset, hasRender } = useSandbox(source, propsText)
+  const example = EXAMPLES.find((x) => x.id === exampleId)
 
   return (
     <div className="frame">
@@ -25,22 +27,34 @@ export default function App() {
             <span>component.tsx</span>
             <select
               aria-label="Examples"
+              value={exampleId}
               onChange={(e) => {
                 const ex = EXAMPLES.find((x) => x.id === e.target.value)
                 if (ex) {
                   reset()
+                  setExampleId(ex.id)
                   setSource(ex.code)
                   setPropsText('')
                 }
               }}
             >
-              {EXAMPLES.map((ex) => (
-                <option key={ex.id} value={ex.id}>
-                  {ex.label}
-                </option>
-              ))}
+              <optgroup label="Works">
+                {EXAMPLES.filter((x) => x.group === 'works').map((ex) => (
+                  <option key={ex.id} value={ex.id}>
+                    {ex.label}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Fails on purpose">
+                {EXAMPLES.filter((x) => x.group === 'fails').map((ex) => (
+                  <option key={ex.id} value={ex.id}>
+                    ✕ {ex.label}
+                  </option>
+                ))}
+              </optgroup>
             </select>
           </div>
+          {example && example.code === source && <p className="explains">{example.explains}</p>}
           <CodeEditor value={source} onChange={setSource} />
         </section>
 
@@ -52,6 +66,7 @@ export default function App() {
             </span>
           </div>
           <iframe
+            key={frameKey}
             ref={frame}
             className="preview"
             title="Component preview (sandboxed)"

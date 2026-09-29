@@ -36,6 +36,22 @@ export default function Hello({ name }: z.infer<typeof propsSchema>) {
 
 Imports are limited to `react`, `zod` and `@kit/ui` (`Card`, `Stack`, `Text`, `Button`, `Badge`).
 
+## Failure gallery
+
+Every safeguard has an example that trips it on purpose (pick one from the ✕ list in the editor):
+
+| Example | Caught by | Result |
+|---|---|---|
+| Disallowed import | host import scan | `import error`, code never runs |
+| Dynamic `require(name)` | sandbox `require` | `evaluate error` |
+| Invalid props | Zod `propsSchema` | `validate error` with each issue |
+| Throw during render | error boundary | `render error` |
+| Throw in a click handler | `window.onerror` in the sandbox | `runtime error` |
+| `while (true) {}` | loop guard | `render error` after 1s |
+| Regex backtracking | watchdog | sandbox restarted after 3s |
+| `fetch()` | CSP `connect-src 'none'` | request blocked |
+| `window.parent.document`, cookies, storage, top navigation | opaque origin + sandbox flags | `SecurityError` |
+
 ## How it works
 
 ```
@@ -62,6 +78,8 @@ editor ─▶ compile TSX (Sucrase)            sandbox="allow-scripts", opaque o
 | **Sandboxed iframe without `allow-same-origin`** | The frame gets an opaque origin: no access to the host's DOM, cookies or storage, enforced by the browser. | Its own scripts load cross-origin, so `/assets/*` is served with `Access-Control-Allow-Origin: *`. |
 | **Import allowlist, checked twice** | The host scans compiled `require()` calls and rejects anything outside `react`, `zod` and `@kit/ui` before sending code; the sandbox's `require` enforces the same list, which also catches computed names like `require(someVar)`. | Only a fixed set of modules is available. Globals like `window` aren't covered by the allowlist; the iframe and CSP contain those. |
 | **Props schema validated in the sandbox** | The schema is user code, so it runs where user code runs. Invalid props show as a list of issues and the component never sees bad data. | Duck-typed (`safeParse`), so any Zod-compatible schema works; there's no check that the schema matches the component's TypeScript types. |
+| **Loop guard (code instrumentation)** | Every loop gets a time check (via acorn + magic-string) that throws after 1s, so infinite loops become ordinary errors in every browser. | Adds a function call per iteration; it's a usability safeguard, not a security boundary. |
+| **Watchdog (heartbeat + restart)** | The host pings the sandbox every second; after 3s of silence it throws the iframe away and starts a fresh one, without resending the code that hung. | Relies on the iframe running on its own thread. Chromium isolates sandboxed frames in their own process; browsers that don't can freeze the tab while the sandbox is stuck. |
 | **CSP inside the sandbox** | `connect-src 'none'` blocks `fetch`/XHR/WebSocket, so user code can't send data anywhere. | Needs `'unsafe-eval'` because user code runs via `new Function`; the CSP is added to production builds only, since the dev server needs HMR. |
 | **`postMessage` with target `'*'`** | An opaque origin can't be addressed by name. Both sides instead check `event.source` and validate the payload. | Messages must never carry anything sensitive; they only carry the user's own code and render status. |
 

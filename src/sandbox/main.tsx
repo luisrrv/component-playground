@@ -12,8 +12,10 @@ import * as Kit from '../kit'
 import { notAvailableMessage } from '../allowlist'
 import { evaluate, type ModuleMap } from '../runtime/evaluate'
 import { resolveProps } from '../runtime/contract'
+import { GUARD_NAME, LOOP_LIMIT_MS } from '../runtime/loopGuard'
 import { HostMessage, type SandboxMessage } from '../protocol'
 import { ErrorBoundary } from './ErrorBoundary'
+import { Committed } from './Committed'
 import './sandbox.css'
 
 // Must match ALLOWED_MODULES + INTERNAL_MODULES in ../allowlist.ts.
@@ -23,6 +25,19 @@ const MODULES: ModuleMap = {
   zod: Zod,
   '@kit/ui': Kit,
 }
+
+// Called from inside every loop in user code (see runtime/loopGuard.ts).
+// Once it trips, it keeps throwing until the next render, so React's retry
+// of a failed render doesn't spend another full second in the same loop.
+let loopTripped = false
+Object.defineProperty(window, GUARD_NAME, {
+  value: (start: number) => {
+    if (loopTripped || performance.now() - start > LOOP_LIMIT_MS) {
+      loopTripped = true
+      throw new Error(`A loop ran for more than ${LOOP_LIMIT_MS / 1000}s and was stopped.`)
+    }
+  },
+})
 
 const root = createRoot(document.getElementById('root')!)
 let currentId: number | null = null
@@ -46,6 +61,7 @@ function toJson(value: unknown): string | null {
 }
 
 function render(id: number, code: string, customProps: unknown) {
+  loopTripped = false
   let Component: ComponentType<Record<string, unknown>>
   let exampleProps: string | null = null
   let props: Record<string, unknown>
@@ -73,12 +89,14 @@ function render(id: number, code: string, customProps: unknown) {
   }
 
   currentId = id
+  const onCommit = () => post({ type: 'rendered', id, propsSource, exampleProps })
   root.render(
     <ErrorBoundary key={id} onError={(err) => post({ type: 'error', id, phase: 'render', message: message(err) })}>
-      <Component {...props} />
+      <Committed onCommit={onCommit}>
+        <Component {...props} />
+      </Committed>
     </ErrorBoundary>,
   )
-  post({ type: 'rendered', id, propsSource, exampleProps })
 }
 
 window.addEventListener('message', (event) => {
@@ -86,6 +104,7 @@ window.addEventListener('message', (event) => {
   const parsed = HostMessage.safeParse(event.data)
   if (!parsed.success) return
   if (parsed.data.type === 'render') render(parsed.data.id, parsed.data.code, parsed.data.props)
+  else if (parsed.data.type === 'ping') post({ type: 'pong', n: parsed.data.n })
   else if (parsed.data.type === 'clear') {
     currentId = null
     root.render(null)

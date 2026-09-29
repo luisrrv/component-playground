@@ -110,3 +110,7 @@ h1 { font-size: 1.125rem; font-weight: 400; letter-spacing: 0.02em; line-height:
 }
 .props-editor textarea:focus-visible { outline: 1px solid var(--accent); }
 .props-editor textarea::placeholder { color: #5c5c5a; }
+
+/* --- Gallery (M5) --- */
+.explains { padding: 6px 16px; font-size: 0.75rem; color: var(--fg-dim); border-bottom: 1px dashed var(--rule); }
+.explains::before { content: '// '; color: var(--accent); }

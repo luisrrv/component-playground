@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { compile } from '../runtime/compile'
 import { disallowedImports } from '../runtime/imports'
+import { guardLoops } from '../runtime/loopGuard'
 import { notAvailableMessage } from '../allowlist'
 import { SandboxMessage, type ErrorPhase } from '../protocol'
 
@@ -14,6 +15,16 @@ export type PreviewError = {
 export type PreviewStatus = 'loading' | 'ok' | 'error'
 
 const DEBOUNCE_MS = 300
+const PING_EVERY_MS = 1000
+const TIMEOUT_MS = 3000
+
+function withLoopGuard(code: string): string {
+  try {
+    return guardLoops(code)
+  } catch {
+    return code // the watchdog still covers hangs
+  }
+}
 
 /**
  * Compiles in the host and sends the result to the sandbox iframe.
@@ -43,6 +54,12 @@ export function useSandbox(source: string, propsText: string) {
   const [error, setError] = useState<PreviewError | null>(null)
   const [propsInfo, setPropsInfo] = useState<PropsInfo | null>(null)
   const [hasRender, setHasRender] = useState(false)
+  // Changing this remounts the iframe (fresh document, fresh JS realm).
+  const [frameKey, setFrameKey] = useState(0)
+  // Bumped by reset() so the same source recompiles after the preview is cleared.
+  const [generation, setGeneration] = useState(0)
+  const lastPong = useRef(0)
+  const pingN = useRef(0)
 
   const send = useCallback(() => {
     const win = frame.current?.contentWindow
@@ -53,6 +70,28 @@ export function useSandbox(source: string, propsText: string) {
     win.postMessage(props === undefined ? { type: 'render', id, code } : { type: 'render', id, code, props }, '*')
   }, [])
 
+  // Watchdog: if the sandbox stops answering pings (e.g. stuck in a loop the
+  // loop guard missed), throw the whole iframe away and start a new one.
+  // This needs the iframe to run in its own process/thread, which Chromium
+  // does for sandboxed frames; elsewhere the loop guard is the main defense.
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const win = frame.current?.contentWindow
+      if (!win || !ready.current) return
+      if (performance.now() - lastPong.current > TIMEOUT_MS) {
+        ready.current = false
+        latest.current = null // don't resend the code that hung
+        setHasRender(false)
+        setStatus('error')
+        setError({ phase: 'timeout', message: `The preview stopped responding for ${TIMEOUT_MS / 1000}s, so it was restarted. Edit the code to try again.` })
+        setFrameKey((k) => k + 1)
+        return
+      }
+      win.postMessage({ type: 'ping', n: ++pingN.current }, '*')
+    }, PING_EVERY_MS)
+    return () => clearInterval(timer)
+  }, [])
+
   /** Empty the preview (used when switching examples). */
   const reset = useCallback(() => {
     latest.current = null
@@ -60,6 +99,7 @@ export function useSandbox(source: string, propsText: string) {
     setHasRender(false)
     setError(null)
     setStatus('loading')
+    setGeneration((g) => g + 1)
     frame.current?.contentWindow?.postMessage({ type: 'clear' }, '*')
   }, [])
 
@@ -72,7 +112,12 @@ export function useSandbox(source: string, propsText: string) {
 
       if (msg.type === 'ready') {
         ready.current = true
+        lastPong.current = performance.now()
         send()
+        return
+      }
+      if (msg.type === 'pong') {
+        lastPong.current = performance.now()
         return
       }
       if (msg.id !== null && msg.id !== latest.current?.id) return // stale
@@ -112,11 +157,11 @@ export function useSandbox(source: string, propsText: string) {
         setError({ phase: 'props', message: props.message })
         return
       }
-      latest.current = { id: ++nextId.current, code: compiled.code, props: props.value }
+      latest.current = { id: ++nextId.current, code: withLoopGuard(compiled.code), props: props.value }
       send()
     }, DEBOUNCE_MS)
     return () => clearTimeout(timer)
-  }, [source, propsText, send])
+  }, [source, propsText, generation, send])
 
-  return { frame, status, error, propsInfo, reset, hasRender }
+  return { frame, frameKey, status, error, propsInfo, reset, hasRender }
 }

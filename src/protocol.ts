@@ -7,7 +7,7 @@ import { z } from 'zod'
  * code, so the host treats its messages as untrusted input too.
  */
 
-export const ErrorPhase = z.enum(['compile', 'import', 'evaluate', 'props', 'validate', 'render', 'runtime'])
+export const ErrorPhase = z.enum(['compile', 'import', 'evaluate', 'props', 'validate', 'render', 'runtime', 'timeout'])
 export type ErrorPhase = z.infer<typeof ErrorPhase>
 
 // host -> sandbox
@@ -22,12 +22,15 @@ export const HostMessage = z.discriminatedUnion('type', [
   // Clear the preview, e.g. when switching examples, so "last version that
   // worked" never shows a different component.
   z.object({ type: z.literal('clear') }),
+  // Watchdog heartbeat; a sandbox stuck in a loop can't answer.
+  z.object({ type: z.literal('ping'), n: z.number().int() }),
 ])
 export type HostMessage = z.infer<typeof HostMessage>
 
 // sandbox -> host
 export const SandboxMessage = z.discriminatedUnion('type', [
   z.object({ type: z.literal('ready') }),
+  z.object({ type: z.literal('pong'), n: z.number().int() }),
   z.object({
     type: z.literal('rendered'),
     id: z.number().int(),
