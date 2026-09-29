@@ -8,16 +8,20 @@ export type ModuleExports = {
 /**
  * Runs compiled module code and returns its exports.
  *
- * `require` resolves only names present in `modules`. In M1 this runs in the
- * host page; from M2 it runs inside the sandbox iframe instead.
+ * `require` resolves only names present in `modules`; anything else throws,
+ * even if the name is computed at runtime. Runs inside the sandbox iframe.
  */
-export function evaluate(code: string, modules: ModuleMap): ModuleExports {
+export function evaluate(
+  code: string,
+  modules: ModuleMap,
+  notFound: (name: string) => string = (name) => `Cannot find module '${name}'`,
+): ModuleExports {
   const exports: ModuleExports = {}
   const module = { exports }
 
   const require = (name: string): unknown => {
     if (Object.hasOwn(modules, name)) return modules[name]
-    throw new Error(`Cannot find module '${name}'`)
+    throw new Error(notFound(name))
   }
 
   // eslint-disable-next-line @typescript-eslint/no-implied-eval

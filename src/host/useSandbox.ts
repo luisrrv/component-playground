@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { compile } from '../runtime/compile'
+import { disallowedImports } from '../runtime/imports'
+import { notAvailableMessage } from '../allowlist'
 import { SandboxMessage, type ErrorPhase } from '../protocol'
 
 export type PreviewError = {
@@ -66,6 +68,12 @@ export function useSandbox(source: string) {
       if (!compiled.ok) {
         setStatus('error')
         setError({ phase: 'compile', ...compiled.error })
+        return
+      }
+      const blocked = disallowedImports(compiled.code)
+      if (blocked.length > 0) {
+        setStatus('error')
+        setError({ phase: 'import', message: blocked.map(notAvailableMessage).join('\n') })
         return
       }
       latest.current = { id: ++nextId.current, code: compiled.code }

@@ -68,7 +68,7 @@ function ErrorPanel({ error }: { error: PreviewError }) {
         {error.phase} error{where}
       </strong>
       <pre>{error.message}</pre>
-      {(error.phase === 'compile' || error.phase === 'evaluate') && (
+      {(error.phase === 'compile' || error.phase === 'import' || error.phase === 'evaluate') && (
         <p className="dim">Showing the last version that worked.</p>
       )}
     </div>

@@ -7,15 +7,20 @@ import { type ComponentType } from 'react'
 import * as React from 'react'
 import * as JsxRuntime from 'react/jsx-runtime'
 import { createRoot } from 'react-dom/client'
+import * as Zod from 'zod'
+import * as Kit from '../kit'
+import { notAvailableMessage } from '../allowlist'
 import { evaluate, type ModuleMap } from '../runtime/evaluate'
 import { HostMessage, type SandboxMessage } from '../protocol'
 import { ErrorBoundary } from './ErrorBoundary'
 import './sandbox.css'
 
-// M3 replaces this with the curated allowlist.
+// Must match ALLOWED_MODULES + INTERNAL_MODULES in ../allowlist.ts.
 const MODULES: ModuleMap = {
   react: React,
   'react/jsx-runtime': JsxRuntime,
+  zod: Zod,
+  '@kit/ui': Kit,
 }
 
 const root = createRoot(document.getElementById('root')!)
@@ -32,7 +37,7 @@ const message = (err: unknown) => (err instanceof Error ? err.message : String(e
 function render(id: number, code: string) {
   let Component: ComponentType
   try {
-    const exports = evaluate(code, MODULES)
+    const exports = evaluate(code, MODULES, notAvailableMessage)
     if (typeof exports.default !== 'function') {
       throw new Error('The module needs a default export that is a React component.')
     }

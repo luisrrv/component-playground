@@ -7,7 +7,7 @@ import { z } from 'zod'
  * code, so the host treats its messages as untrusted input too.
  */
 
-export const ErrorPhase = z.enum(['compile', 'evaluate', 'render', 'runtime'])
+export const ErrorPhase = z.enum(['compile', 'import', 'evaluate', 'render', 'runtime'])
 export type ErrorPhase = z.infer<typeof ErrorPhase>
 
 // host -> sandbox
