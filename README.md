@@ -6,6 +6,16 @@ Write a React component and watch it render inside a sandbox that assumes the co
 
 ![component-playground](docs/screenshot.png)
 
+## Why this exists
+
+Page builders, plugin systems and customizable dashboards all let users extend the UI with their own code, and all of them have to run that code without putting the rest of the app at risk. I built this to show how, with each safeguard paired with a failure case you can trigger in the demo.
+
+The constraints that shaped it:
+
+- **Assume the code is hostile or just broken.** Both have to fail safely, and look the same to the host.
+- **No server.** Everything, including compilation, happens in the browser, so the demo is a static site.
+- **Every safeguard is observable.** If it can't be demonstrated in the failure gallery, it isn't claimed.
+
 ## What it demonstrates
 
 Letting people run their own UI code inside your app without letting that code break, hang, or reach into the host page:
