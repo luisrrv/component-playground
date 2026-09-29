@@ -5,11 +5,18 @@
 [build.environment]
   NODE_VERSION = "22"
 
-# Baseline security headers for the host page. The sandbox gets its own
-# stricter CSP in M2.
+# Baseline security headers.
 [[headers]]
   for = "/*"
   [headers.values]
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
     X-Frame-Options = "SAMEORIGIN"
+
+# The sandbox iframe runs with an opaque ("null") origin, so loading its own
+# scripts and styles counts as a cross-origin request. These files are public
+# build output, so allowing any origin to read them is safe.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"

@@ -1,13 +1,11 @@
 import { useState } from 'react'
 import { CodeEditor } from './editor/CodeEditor'
 import { EXAMPLES } from './examples'
-import { ErrorBoundary } from './runtime/ErrorBoundary'
-import { usePreview, type PreviewError } from './runtime/usePreview'
+import { useSandbox, type PreviewError } from './host/useSandbox'
 
 export default function App() {
   const [source, setSource] = useState(EXAMPLES[0].code)
-  const { component, error, version, reportRenderError } = usePreview(source)
-  const Preview = component?.C
+  const { frame, status, error } = useSandbox(source)
 
   return (
     <div className="frame">
@@ -43,18 +41,19 @@ export default function App() {
 
         <section className="pane" aria-label="Preview">
           <div className="pane-head">
-            <span>preview</span>
-            <span className={error ? 'badge badge-error' : 'badge'}>{error ? error.phase + ' error' : 'ok'}</span>
+            <span>preview · sandboxed</span>
+            <span className={status === 'error' ? 'badge badge-error' : 'badge'}>
+              {status === 'error' && error ? `${error.phase} error` : status}
+            </span>
           </div>
-          <div className="preview">
-            {Preview && (
-              <ErrorBoundary key={version} onError={reportRenderError}>
-                <Preview />
-              </ErrorBoundary>
-            )}
-          </div>
+          <iframe
+            ref={frame}
+            className="preview"
+            title="Component preview (sandboxed)"
+            src="/sandbox.html"
+            sandbox="allow-scripts"
+          />
           {error && <ErrorPanel error={error} />}
-          <p className="note">Rendering runs in this page for now; the sandbox comes next.</p>
         </section>
       </div>
     </div>
@@ -69,7 +68,9 @@ function ErrorPanel({ error }: { error: PreviewError }) {
         {error.phase} error{where}
       </strong>
       <pre>{error.message}</pre>
-      {error.phase !== 'render' && <p className="dim">Showing the last version that worked.</p>}
+      {(error.phase === 'compile' || error.phase === 'evaluate') && (
+        <p className="dim">Showing the last version that worked.</p>
+      )}
     </div>
   )
 }

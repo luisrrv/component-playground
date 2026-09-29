@@ -16,11 +16,30 @@ Letting people run their own UI code inside your app without letting that code b
 
 ## How it works
 
-_Coming with the sandbox milestone._
+```
+Host page (trusted)                        Sandbox iframe (untrusted)
+───────────────────                        ─────────────────────────────
+editor ─▶ compile TSX (Sucrase)            sandbox="allow-scripts", opaque origin
+           │ syntax error → shown here     CSP: connect-src 'none', no external code
+           ▼
+   postMessage {render, id, code} ──────▶  evaluate module with a scoped require()
+                                           render inside an error boundary
+   ◀────── {rendered | error{phase}} ───── report errors (evaluate / render / runtime)
+```
+
+- **Compile in the host.** It's a pure string transform, so syntax errors show even if the sandbox is down.
+- **Execute in the sandbox.** Everything that runs user code happens inside the iframe.
+- **Validate both directions.** Messages are checked with Zod on both sides and tagged with a render id, so a slow, stale result can't overwrite a newer one.
 
 ## Key decisions
 
-_ADR-style notes, added as each decision is made._
+| Decision | Why | Tradeoff |
+|---|---|---|
+| **Sucrase for in-browser compile** | Small and fast; strips types and rewrites JSX and imports, which is all a preview needs. | No type-checking. |
+| **Imports become `require()` calls** | Sucrase's `imports` transform gives one choke point where the runtime decides which modules exist. | CommonJS-style output instead of native ES modules. |
+| **Sandboxed iframe without `allow-same-origin`** | The frame gets an opaque origin: no access to the host's DOM, cookies or storage, enforced by the browser. | Its own scripts load cross-origin, so `/assets/*` is served with `Access-Control-Allow-Origin: *`. |
+| **CSP inside the sandbox** | `connect-src 'none'` blocks `fetch`/XHR/WebSocket, so user code can't send data anywhere. | Needs `'unsafe-eval'` because user code runs via `new Function`; the CSP is added to production builds only, since the dev server needs HMR. |
+| **`postMessage` with target `'*'`** | An opaque origin can't be addressed by name. Both sides instead check `event.source` and validate the payload. | Messages must never carry anything sensitive; they only carry the user's own code and render status. |
 
 ## Local development
 
