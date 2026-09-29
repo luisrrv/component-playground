@@ -1,8 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { compile } from '../runtime/compile'
-import { disallowedImports } from '../runtime/imports'
-import { guardLoops } from '../runtime/loopGuard'
-import { notAvailableMessage } from '../allowlist'
 import { SandboxMessage, type ErrorPhase } from '../protocol'
 
 export type PreviewError = {
@@ -18,13 +14,8 @@ const DEBOUNCE_MS = 300
 const PING_EVERY_MS = 1000
 const TIMEOUT_MS = 3000
 
-function withLoopGuard(code: string): string {
-  try {
-    return guardLoops(code)
-  } catch {
-    return code // the watchdog still covers hangs
-  }
-}
+let pipeline: Promise<typeof import('../runtime/pipeline')> | null = null
+const loadPipeline = () => (pipeline ??= import('../runtime/pipeline'))
 
 /**
  * Compiles in the host and sends the result to the sandbox iframe.
@@ -138,17 +129,14 @@ export function useSandbox(source: string, propsText: string) {
   }, [send])
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      const compiled = compile(source)
-      if (!compiled.ok) {
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      const { prepare } = await loadPipeline()
+      if (cancelled) return
+      const prepared = prepare(source)
+      if (!prepared.ok) {
         setStatus('error')
-        setError({ phase: 'compile', ...compiled.error })
-        return
-      }
-      const blocked = disallowedImports(compiled.code)
-      if (blocked.length > 0) {
-        setStatus('error')
-        setError({ phase: 'import', message: blocked.map(notAvailableMessage).join('\n') })
+        setError({ phase: prepared.phase, ...prepared.error })
         return
       }
       const props = parseProps(propsText)
@@ -157,10 +145,13 @@ export function useSandbox(source: string, propsText: string) {
         setError({ phase: 'props', message: props.message })
         return
       }
-      latest.current = { id: ++nextId.current, code: withLoopGuard(compiled.code), props: props.value }
+      latest.current = { id: ++nextId.current, code: prepared.code, props: props.value }
       send()
     }, DEBOUNCE_MS)
-    return () => clearTimeout(timer)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
   }, [source, propsText, generation, send])
 
   return { frame, frameKey, status, error, propsInfo, reset, hasRender }

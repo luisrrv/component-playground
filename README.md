@@ -2,7 +2,9 @@
 
 Write a React component and watch it render inside a sandbox that assumes the code is untrusted.
 
-> **Status:** work in progress. The sections below fill in as each piece lands.
+**Live:** [playground.lrod.dev](https://playground.lrod.dev) · **Stack:** React · TypeScript · Vite · Sucrase · Zod · CodeMirror
+
+![component-playground](docs/screenshot.png)
 
 ## What it demonstrates
 
@@ -83,6 +85,20 @@ editor ─▶ compile TSX (Sucrase)            sandbox="allow-scripts", opaque o
 | **CSP inside the sandbox** | `connect-src 'none'` blocks `fetch`/XHR/WebSocket, so user code can't send data anywhere. | Needs `'unsafe-eval'` because user code runs via `new Function`; the CSP is added to production builds only, since the dev server needs HMR. |
 | **`postMessage` with target `'*'`** | An opaque origin can't be addressed by name. Both sides instead check `event.source` and validate the payload. | Messages must never carry anything sensitive; they only carry the user's own code and render status. |
 
+## Limitations
+
+Known and accepted:
+
+- **No type-checking.** Sucrase strips TypeScript types without checking them, and `propsSchema` isn't verified against the component's prop types.
+- **No CPU or memory limits.** The loop guard and watchdog recover from hangs, but a component can still use a lot of memory or CPU before that happens.
+- **Browser differences.** The watchdog relies on the sandboxed iframe running on its own thread. Chromium isolates sandboxed frames in a separate process; other browsers may freeze the whole tab until the watchdog or the loop guard fires.
+- **Side channels aren't in scope.** Timing and rendering side channels (e.g. measuring layout) aren't mitigated.
+- **The loop guard is best-effort.** It's code instrumentation, so determined code can get around it; the watchdog is the backstop.
+
+## Performance
+
+The page shell loads first; the editor (CodeMirror) and the compiler (Sucrase + acorn) are split into their own chunks and load in parallel, so the first render doesn't wait on the two largest dependencies.
+
 ## Local development
 
 ```bash
@@ -93,11 +109,9 @@ npm run lint       # oxlint
 npm run build      # type-check + production build to dist/
 ```
 
+The sandbox CSP is only added to production builds (the dev server needs HMR), so check network blocking with `npm run build && npm run preview`.
+
 Requires Node 20.19+ (see `.nvmrc`).
-
-## Stack
-
-Vite · React · TypeScript · Vitest · Netlify
 
 ## License
 

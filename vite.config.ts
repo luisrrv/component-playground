@@ -46,11 +46,10 @@ export default defineConfig({
       },
     },
   },
-  server: {
-    // The sandbox iframe has an opaque ("null") origin, so its module scripts
-    // are cross-origin requests to the dev server.
-    cors: { origin: '*' },
-  },
+  // The sandbox iframe has an opaque ("null") origin, so its module scripts
+  // are cross-origin requests (netlify.toml sets the same header in production).
+  server: { cors: { origin: '*' } },
+  preview: { cors: { origin: '*' } },
   test: {
     environment: 'node',
   },

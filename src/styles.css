@@ -114,3 +114,19 @@ h1 { font-size: 1.125rem; font-weight: 400; letter-spacing: 0.02em; line-height:
 /* --- Gallery (M5) --- */
 .explains { padding: 6px 16px; font-size: 0.75rem; color: var(--fg-dim); border-bottom: 1px dashed var(--rule); }
 .explains::before { content: '// '; color: var(--accent); }
+.editor-fallback { margin: 0; padding: 4px 12px 4px 44px; font: 0.8125rem/1.6 var(--mono); color: var(--fg-dim); white-space: pre; }
+
+/* --- Intro (M6) --- */
+.titlebar nav { display: flex; gap: 16px; }
+.intro { padding: 20px 20px 18px; border-bottom: 1px solid var(--border); }
+.intro h1 { font-size: 1.125rem; }
+.intro p { margin-top: 8px; max-width: 96ch; font-size: 0.8125rem; color: var(--fg-dim); line-height: 1.6; }
+.intro strong { color: var(--danger); font-weight: 400; }
+.titlebar, .titlebar nav a { white-space: nowrap; }
+.pane-head select { min-width: 0; max-width: 65%; text-overflow: ellipsis; }
+@media (max-width: 600px) {
+  .titlebar > span { display: none; }
+  .titlebar { justify-content: flex-end; }
+  .intro { padding: 16px; }
+  .editor { max-height: 60vh; }
+}

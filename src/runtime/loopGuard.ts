@@ -2,9 +2,9 @@ import { parse, type Node } from 'acorn'
 import { ancestor } from 'acorn-walk'
 import MagicString from 'magic-string'
 
-/** Name of the global the sandbox defines; see sandbox/main.tsx. */
-export const GUARD_NAME = '__loopGuard'
-export const LOOP_LIMIT_MS = 1000
+import { GUARD_NAME, LOOP_LIMIT_MS } from './loopGuardConfig'
+
+export { GUARD_NAME, LOOP_LIMIT_MS }
 
 type Loop = Node & { body: Node & { type: string } }
 

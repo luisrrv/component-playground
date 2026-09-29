@@ -1,7 +1,9 @@
-import { useState } from 'react'
-import { CodeEditor } from './editor/CodeEditor'
+import { lazy, Suspense, useState } from 'react'
 import { EXAMPLES } from './examples'
 import { useSandbox, type PreviewError, type PropsInfo } from './host/useSandbox'
+
+// CodeMirror is the largest dependency; load it after the shell renders.
+const CodeEditor = lazy(() => import('./editor/CodeEditor').then((m) => ({ default: m.CodeEditor })))
 
 export default function App() {
   const [source, setSource] = useState(EXAMPLES[0].code)
@@ -18,8 +20,21 @@ export default function App() {
           <a href="https://github.com/luisrrv/component-playground" target="_blank" rel="noopener">
             source ↗
           </a>
+          <a href="https://lrod.dev" target="_blank" rel="noopener">
+            lrod.dev ↗
+          </a>
         </nav>
       </header>
+
+      <div className="intro">
+        <h1>component-playground</h1>
+        <p>
+          Write a React component and it renders in a sandbox that assumes the code is untrusted: compiled in the
+          browser, limited to an import allowlist, props checked against a schema, isolated in an iframe with a strict
+          CSP, and recovered from crashes and infinite loops. Pick a <strong>✕</strong> example to watch each safeguard
+          catch something.
+        </p>
+      </div>
 
       <div className="workspace">
         <section className="pane" aria-label="Editor">
@@ -55,13 +70,15 @@ export default function App() {
             </select>
           </div>
           {example && example.code === source && <p className="explains">{example.explains}</p>}
-          <CodeEditor value={source} onChange={setSource} />
+          <Suspense fallback={<pre className="editor editor-fallback">{source}</pre>}>
+            <CodeEditor value={source} onChange={setSource} />
+          </Suspense>
         </section>
 
         <section className="pane" aria-label="Preview">
           <div className="pane-head">
             <span>preview · sandboxed</span>
-            <span className={status === 'error' ? 'badge badge-error' : 'badge'}>
+            <span className={status === 'error' ? 'badge badge-error' : 'badge'} role="status" aria-live="polite">
               {status === 'error' && error ? `${error.phase} error` : status}
             </span>
           </div>
