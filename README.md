@@ -14,6 +14,28 @@ Letting people run their own UI code inside your app without letting that code b
 - **Isolate** rendering in a sandboxed iframe with a strict CSP
 - **Recover** from render errors and infinite loops
 
+## Writing a component
+
+A module can export three things:
+
+```tsx
+import { z } from 'zod'
+import { Card, Text } from '@kit/ui'
+
+// optional: the props contract, checked before every render
+export const propsSchema = z.object({ name: z.string().min(1) })
+
+// optional: props to render with when the props editor is empty
+export const exampleProps = { name: 'Ada' }
+
+// required: the component
+export default function Hello({ name }: z.infer<typeof propsSchema>) {
+  return <Card title={`Hello, ${name}`}><Text>👋</Text></Card>
+}
+```
+
+Imports are limited to `react`, `zod` and `@kit/ui` (`Card`, `Stack`, `Text`, `Button`, `Badge`).
+
 ## How it works
 
 ```
@@ -24,7 +46,7 @@ editor ─▶ compile TSX (Sucrase)            sandbox="allow-scripts", opaque o
            ▼
    postMessage {render, id, code} ──────▶  evaluate module with a scoped require()
                                            render inside an error boundary
-   ◀────── {rendered | error{phase}} ───── report errors (evaluate / render / runtime)
+   ◀────── {rendered | error{phase}} ───── report errors (evaluate / validate / render / runtime)
 ```
 
 - **Compile in the host.** It's a pure string transform, so syntax errors show even if the sandbox is down.
@@ -39,6 +61,7 @@ editor ─▶ compile TSX (Sucrase)            sandbox="allow-scripts", opaque o
 | **Imports become `require()` calls** | Sucrase's `imports` transform gives one choke point where the runtime decides which modules exist. | CommonJS-style output instead of native ES modules. |
 | **Sandboxed iframe without `allow-same-origin`** | The frame gets an opaque origin: no access to the host's DOM, cookies or storage, enforced by the browser. | Its own scripts load cross-origin, so `/assets/*` is served with `Access-Control-Allow-Origin: *`. |
 | **Import allowlist, checked twice** | The host scans compiled `require()` calls and rejects anything outside `react`, `zod` and `@kit/ui` before sending code; the sandbox's `require` enforces the same list, which also catches computed names like `require(someVar)`. | Only a fixed set of modules is available. Globals like `window` aren't covered by the allowlist; the iframe and CSP contain those. |
+| **Props schema validated in the sandbox** | The schema is user code, so it runs where user code runs. Invalid props show as a list of issues and the component never sees bad data. | Duck-typed (`safeParse`), so any Zod-compatible schema works; there's no check that the schema matches the component's TypeScript types. |
 | **CSP inside the sandbox** | `connect-src 'none'` blocks `fetch`/XHR/WebSocket, so user code can't send data anywhere. | Needs `'unsafe-eval'` because user code runs via `new Function`; the CSP is added to production builds only, since the dev server needs HMR. |
 | **`postMessage` with target `'*'`** | An opaque origin can't be addressed by name. Both sides instead check `event.source` and validate the payload. | Messages must never carry anything sensitive; they only carry the user's own code and render status. |
 

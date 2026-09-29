@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { CodeEditor } from './editor/CodeEditor'
 import { EXAMPLES } from './examples'
-import { useSandbox, type PreviewError } from './host/useSandbox'
+import { useSandbox, type PreviewError, type PropsInfo } from './host/useSandbox'
 
 export default function App() {
   const [source, setSource] = useState(EXAMPLES[0].code)
-  const { frame, status, error } = useSandbox(source)
+  const [propsText, setPropsText] = useState('')
+  const { frame, status, error, propsInfo, reset, hasRender } = useSandbox(source, propsText)
 
   return (
     <div className="frame">
@@ -26,7 +27,11 @@ export default function App() {
               aria-label="Examples"
               onChange={(e) => {
                 const ex = EXAMPLES.find((x) => x.id === e.target.value)
-                if (ex) setSource(ex.code)
+                if (ex) {
+                  reset()
+                  setSource(ex.code)
+                  setPropsText('')
+                }
               }}
             >
               {EXAMPLES.map((ex) => (
@@ -53,14 +58,15 @@ export default function App() {
             src="/sandbox.html"
             sandbox="allow-scripts"
           />
-          {error && <ErrorPanel error={error} />}
+          {error && <ErrorPanel error={error} keptPrevious={hasRender} />}
+          <PropsEditor value={propsText} onChange={setPropsText} info={propsInfo} />
         </section>
       </div>
     </div>
   )
 }
 
-function ErrorPanel({ error }: { error: PreviewError }) {
+function ErrorPanel({ error, keptPrevious }: { error: PreviewError; keptPrevious: boolean }) {
   const where = error.line ? ` at line ${error.line}${error.column ? `:${error.column}` : ''}` : ''
   return (
     <div className="error-panel" role="alert">
@@ -68,9 +74,49 @@ function ErrorPanel({ error }: { error: PreviewError }) {
         {error.phase} error{where}
       </strong>
       <pre>{error.message}</pre>
-      {(error.phase === 'compile' || error.phase === 'import' || error.phase === 'evaluate') && (
+      {keptPrevious && error.phase !== 'render' && error.phase !== 'runtime' && (
         <p className="dim">Showing the last version that worked.</p>
       )}
+    </div>
+  )
+}
+
+function PropsEditor({
+  value,
+  onChange,
+  info,
+}: {
+  value: string
+  onChange: (v: string) => void
+  info: PropsInfo | null
+}) {
+  const usingExample = value.trim() === ''
+  return (
+    <div className="props-editor">
+      <div className="props-head">
+        <label htmlFor="props-json">props (JSON)</label>
+        <span className="dim">
+          {usingExample ? (info?.exampleProps ? 'using exampleProps' : 'no props') : 'custom'}
+        </span>
+        {usingExample && info?.exampleProps && (
+          <button type="button" className="link-button" onClick={() => onChange(info.exampleProps!)}>
+            edit
+          </button>
+        )}
+        {!usingExample && (
+          <button type="button" className="link-button" onClick={() => onChange('')}>
+            reset
+          </button>
+        )}
+      </div>
+      <textarea
+        id="props-json"
+        spellCheck={false}
+        value={value}
+        placeholder={info?.exampleProps ?? '{}'}
+        onChange={(e) => onChange(e.target.value)}
+        rows={5}
+      />
     </div>
   )
 }

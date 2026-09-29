@@ -96,3 +96,17 @@ h1 { font-size: 1.125rem; font-weight: 400; letter-spacing: 0.02em; line-height:
   .pane + .pane { border-left: 0; border-top: 1px solid var(--border); }
   .editor { min-height: 320px; }
 }
+
+/* --- Props editor (M4) --- */
+.props-editor { border-top: 1px solid var(--border); padding: 8px 16px 12px; }
+.props-head { display: flex; gap: 12px; align-items: baseline; font-size: 0.8125rem; color: var(--fg-dim); margin-bottom: 6px; }
+.props-head label { color: var(--fg); }
+.props-head .dim { margin: 0; }
+.link-button { font: inherit; font-size: 0.8125rem; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; margin-left: auto; }
+.link-button:hover { text-decoration: underline; text-underline-offset: 3px; }
+.props-editor textarea {
+  width: 100%; resize: vertical; font: 0.8125rem/1.5 var(--mono); color: var(--fg);
+  background: var(--bg-raised); border: 1px solid var(--rule); padding: 8px;
+}
+.props-editor textarea:focus-visible { outline: 1px solid var(--accent); }
+.props-editor textarea::placeholder { color: #5c5c5a; }
