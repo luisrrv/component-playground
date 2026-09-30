@@ -122,9 +122,14 @@ export function useSandbox(source: string, propsText: string, theme: unknown = {
       if (msg.id !== null && msg.id !== latest.current?.id) return // stale
 
       if (msg.type === 'rendered') {
-        setStatus('ok')
-        setError(null)
         setHasRender(true)
+        if (msg.slotErrors?.length) {
+          setStatus('error')
+          setError({ phase: 'slot', message: msg.slotErrors.join('\n') })
+        } else {
+          setStatus('ok')
+          setError(null)
+        }
         setPropsInfo({ source: msg.propsSource, exampleProps: msg.exampleProps })
       } else {
         setStatus('error')

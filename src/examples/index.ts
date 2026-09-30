@@ -265,6 +265,91 @@ export default function Escape() {
 `,
   },
   {
+    id: 'pricing-card',
+    label: 'Pricing card (slots)',
+    group: 'works',
+    explains: 'Composed from the kit: slots put a badge in the header and actions in the footer, with no changes to the kit.',
+    code: `import { useState } from 'react'
+import { z } from 'zod'
+import { Badge, Button, Card, Stack, Text } from '@kit/ui'
+
+// Built from the kit without changing it: slots place content
+// in the card's aside and footer.
+export const propsSchema = z.object({
+  plan: z.string().min(1),
+  price: z.number().nonnegative(),
+  features: z.array(z.string()).max(6),
+  popular: z.boolean(),
+})
+
+export const exampleProps = {
+  plan: 'Team',
+  price: 12,
+  features: ['Unlimited projects', 'Shared themes', 'Priority support'],
+  popular: true,
+}
+
+export default function PricingCard({ plan, price, features, popular }: z.infer<typeof propsSchema>) {
+  const [seats, setSeats] = useState(3)
+
+  return (
+    <Card
+      title={plan}
+      slots={{
+        aside: popular ? <Badge tone="success">popular</Badge> : undefined,
+        footer: (
+          <Stack direction="row" gap={8}>
+            <Button slots={{ icon: <span>+</span>, end: <span>{seats}</span> }} onClick={() => setSeats(seats + 1)}>
+              Add seat
+            </Button>
+            <Button variant="ghost" onClick={() => setSeats(1)}>Reset</Button>
+          </Stack>
+        ),
+      }}
+    >
+      <Stack gap={10}>
+        <Text>
+          <strong>\${price * seats}</strong> / month for {seats} {seats === 1 ? 'seat' : 'seats'}
+        </Text>
+        <Stack gap={4}>
+          {features.map((f) => <Text key={f} tone="muted">✓ {f}</Text>)}
+        </Stack>
+      </Stack>
+    </Card>
+  )
+}
+`,
+  },
+  {
+    id: 'empty-state',
+    label: 'Empty state (custom header)',
+    group: 'works',
+    explains: 'A slot can hold any component: here a custom header replaces the card title.',
+    code: `import { Button, Card, Stack, Text } from '@kit/ui'
+
+// A custom header in place of the title, plus a footer note.
+function Header() {
+  return (
+    <Stack direction="row" gap={8}>
+      <span aria-hidden>▢</span>
+      <strong>No components yet</strong>
+    </Stack>
+  )
+}
+
+export default function EmptyState() {
+  return (
+    <Card slots={{ header: <Header />, footer: <Text tone="muted">Tip: start from an example.</Text> }}>
+      <Stack gap={12}>
+        <Text tone="muted">Components you build from the kit will show up here.</Text>
+        <Button slots={{ icon: <span>+</span> }}>New component</Button>
+      </Stack>
+    </Card>
+  )
+}
+`,
+  },
+  {
     id: 'themed-kit',
     label: 'Themed kit',
     group: 'works',
@@ -345,6 +430,51 @@ export default function Themed() {
       </Stack>
     </Card>
   )
+}
+`,
+  },
+  {
+    id: 'bad-slot',
+    label: 'A slot that throws',
+    group: 'fails',
+    explains: 'Each slot has its own error boundary, so a failing slot is replaced by a placeholder and the rest of the component still renders.',
+    code: `import { Badge, Button, Card, Stack, Text } from '@kit/ui'
+
+type Stat = { label: string; value: number }
+
+// Bug: \`stats\` is never passed, so this slot throws while rendering.
+function Stats({ stats }: { stats?: Stat[] }) {
+  return <Badge>{stats!.length} stats</Badge>
+}
+
+export default function Report() {
+  return (
+    <Card title="Weekly report" slots={{ aside: <Stats />, footer: <Button variant="ghost">Export</Button> }}>
+      <Stack gap={6}>
+        <Text>Only the aside slot fails. The title, body and footer still render.</Text>
+      </Stack>
+    </Card>
+  )
+}
+`,
+  },
+  {
+    id: 'patch-kit',
+    label: 'Patch the kit',
+    group: 'fails',
+    explains: 'The kit is frozen: replacing or patching a component throws, so customizing has to go through tokens and slots.',
+    code: `import * as ui from '@kit/ui'
+
+// Customizing goes through theme tokens and slots. Replacing or
+// patching kit components isn't possible: the kit is frozen.
+function LoudButton() {
+  return <button style={{ background: 'hotpink' }}>HACKED</button>
+}
+
+;(ui as any).Button = LoudButton
+
+export default function Patched() {
+  return <ui.Card title="Patched kit"><ui.Button>Save</ui.Button></ui.Card>
 }
 `,
   },

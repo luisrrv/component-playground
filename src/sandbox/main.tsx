@@ -9,6 +9,8 @@ import * as JsxRuntime from 'react/jsx-runtime'
 import { createRoot } from 'react-dom/client'
 import * as Zod from 'zod'
 import * as Kit from '../kit'
+import { readOnlyModule } from '../kit/readOnly'
+import { setSlotErrorReporter } from '../kit/slotErrors'
 import { notAvailableMessage } from '../allowlist'
 import { evaluate, type ModuleMap } from '../runtime/evaluate'
 import { resolveProps } from '../runtime/contract'
@@ -24,7 +26,7 @@ const MODULES: ModuleMap = {
   react: React,
   'react/jsx-runtime': JsxRuntime,
   zod: Zod,
-  '@kit/ui': Kit,
+  '@kit/ui': readOnlyModule(Kit),
 }
 
 // Called from inside every loop in user code (see runtime/loopGuard.ts).
@@ -48,6 +50,20 @@ function applyTheme(theme: Theme) {
   for (const [name, value] of Object.entries(themeToCssVars(theme))) style.setProperty(name, value)
 }
 applyTheme(DEFAULT_THEME)
+
+// Slot errors are caught by the kit's per-slot boundaries. Errors during the
+// first commit are sent with "rendered"; later ones (e.g. after a click) are
+// sent on their own.
+let slotErrors: string[] = []
+let committed = false
+setSlotErrorReporter((slot, err) => {
+  const text = `slot "${slot}": ${message(err)}`.slice(0, 500)
+  if (!committed) {
+    if (slotErrors.length < 10) slotErrors.push(text)
+  } else {
+    post({ type: 'error', id: currentId, phase: 'slot', message: text })
+  }
+})
 
 const root = createRoot(document.getElementById('root')!)
 let currentId: number | null = null
@@ -99,7 +115,12 @@ function render(id: number, code: string, customProps: unknown) {
   }
 
   currentId = id
-  const onCommit = () => post({ type: 'rendered', id, propsSource, exampleProps })
+  slotErrors = []
+  committed = false
+  const onCommit = () => {
+    committed = true
+    post({ type: 'rendered', id, propsSource, exampleProps, ...(slotErrors.length > 0 && { slotErrors }) })
+  }
   root.render(
     <ErrorBoundary key={id} onError={(err) => post({ type: 'error', id, phase: 'render', message: message(err) })}>
       <Committed onCommit={onCommit}>

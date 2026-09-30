@@ -7,7 +7,7 @@ import { z } from 'zod'
  * code, so the host treats its messages as untrusted input too.
  */
 
-export const ErrorPhase = z.enum(['compile', 'import', 'evaluate', 'props', 'validate', 'render', 'runtime', 'timeout'])
+export const ErrorPhase = z.enum(['compile', 'import', 'evaluate', 'props', 'validate', 'render', 'runtime', 'slot', 'timeout'])
 export type ErrorPhase = z.infer<typeof ErrorPhase>
 
 // host -> sandbox
@@ -40,6 +40,8 @@ export const SandboxMessage = z.discriminatedUnion('type', [
     propsSource: z.enum(['custom', 'example', 'none']),
     // exampleProps as JSON, so the host can offer them in the props editor.
     exampleProps: z.string().max(10_000).nullable(),
+    // Slots that failed during this render; the rest of the component rendered.
+    slotErrors: z.array(z.string().max(500)).max(10).optional(),
   }),
   z.object({
     type: z.literal('error'),

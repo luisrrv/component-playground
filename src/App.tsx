@@ -138,8 +138,12 @@ function ErrorPanel({ error, keptPrevious }: { error: PreviewError; keptPrevious
         {error.phase} error{where}
       </strong>
       <pre>{error.message}</pre>
-      {keptPrevious && error.phase !== 'render' && error.phase !== 'runtime' && (
-        <p className="dim">Showing the last version that worked.</p>
+      {error.phase === 'slot' ? (
+        <p className="dim">Only the failing slot was replaced; the rest of the component rendered.</p>
+      ) : (
+        keptPrevious &&
+        error.phase !== 'render' &&
+        error.phase !== 'runtime' && <p className="dim">Showing the last version that worked.</p>
       )}
     </div>
   )

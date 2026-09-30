@@ -52,3 +52,16 @@ body {
 }
 .kit-badge-success { background: color-mix(in srgb, #2f9e6f 18%, var(--kit-surface)); color: color-mix(in srgb, #1f6b52 70%, var(--kit-text)); }
 .kit-badge-warning { background: color-mix(in srgb, #e0a030 22%, var(--kit-surface)); color: color-mix(in srgb, #7a5410 70%, var(--kit-text)); }
+
+/* Slots (M8) */
+.kit-card-head { display: flex; align-items: center; justify-content: space-between; gap: calc(var(--kit-space) * 3); margin-bottom: calc(var(--kit-space) * 2); }
+.kit-card-head .kit-card-title { margin: 0; }
+.kit-card-footer { margin-top: calc(var(--kit-space) * 4); padding-top: calc(var(--kit-space) * 3); border-top: 1px solid var(--kit-border); }
+.kit-button { display: inline-flex; align-items: center; gap: calc(var(--kit-space) * 1.5); }
+.kit-button-icon, .kit-button-end { display: inline-flex; }
+.kit-button-end { opacity: .75; font-size: .9em; }
+.kit-slot-error {
+  display: inline-block; font: 12px/1.4 ui-monospace, monospace; padding: 2px 6px;
+  color: #a33a2c; background: color-mix(in srgb, #d9534f 12%, var(--kit-surface));
+  border: 1px dashed #d9534f; border-radius: 3px;
+}
