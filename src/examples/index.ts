@@ -5,6 +5,8 @@ export type Example = {
   /** One line on what this example demonstrates. */
   explains: string
   code: string
+  /** Theme panel JSON to load with the example (empty = default theme). */
+  theme?: string
 }
 
 export const EXAMPLES: Example[] = [
@@ -257,6 +259,90 @@ export default function Escape() {
   return (
     <Card title="Escape attempts">
       <Stack gap={4}>{results.map((r) => <Text key={r}>{r}</Text>)}</Stack>
+    </Card>
+  )
+}
+`,
+  },
+  {
+    id: 'themed-kit',
+    label: 'Themed kit',
+    group: 'works',
+    explains: 'Theme tokens restyle every kit component. Try the presets in the theme panel.',
+    theme: JSON.stringify({ accent: '#7aa2f7', surface: '#1f2230', text: '#e6e8f0', radius: 10 }, null, 2),
+    code: `import { Badge, Button, Card, Stack, Text } from '@kit/ui'
+
+export default function Themed() {
+  return (
+    <Card title="Theme check">
+      <Stack gap={12}>
+        <Text tone="muted">Every kit component reads its colors, radius and spacing from theme tokens.</Text>
+        <Stack direction="row" gap={6}>
+          <Badge>neutral</Badge>
+          <Badge tone="success">success</Badge>
+          <Badge tone="warning">warning</Badge>
+        </Stack>
+        <Stack direction="row" gap={8}>
+          <Button>Primary</Button>
+          <Button variant="ghost">Ghost</Button>
+        </Stack>
+      </Stack>
+    </Card>
+  )
+}
+`,
+  },
+  {
+    id: 'theme-injection',
+    label: 'CSS injection in a theme token',
+    group: 'fails',
+    explains: 'Theme schema: tokens only accept hex colors and bounded numbers, so a value can’t carry extra CSS. The last valid theme stays applied.',
+    theme: JSON.stringify({ accent: 'red; background: url(https://evil.example/pixel.png)', radius: 999 }, null, 2),
+    code: `import { Badge, Button, Card, Stack, Text } from '@kit/ui'
+
+export default function Themed() {
+  return (
+    <Card title="Theme check">
+      <Stack gap={12}>
+        <Text tone="muted">Every kit component reads its colors, radius and spacing from theme tokens.</Text>
+        <Stack direction="row" gap={6}>
+          <Badge>neutral</Badge>
+          <Badge tone="success">success</Badge>
+          <Badge tone="warning">warning</Badge>
+        </Stack>
+        <Stack direction="row" gap={8}>
+          <Button>Primary</Button>
+          <Button variant="ghost">Ghost</Button>
+        </Stack>
+      </Stack>
+    </Card>
+  )
+}
+`,
+  },
+  {
+    id: 'theme-contrast',
+    label: 'Unreadable theme',
+    group: 'fails',
+    explains: 'Theme rules can check the whole theme, not just each value: text on surface must meet 4.5:1 contrast.',
+    theme: JSON.stringify({ text: '#c8c8c8', surface: '#ffffff' }, null, 2),
+    code: `import { Badge, Button, Card, Stack, Text } from '@kit/ui'
+
+export default function Themed() {
+  return (
+    <Card title="Theme check">
+      <Stack gap={12}>
+        <Text tone="muted">Every kit component reads its colors, radius and spacing from theme tokens.</Text>
+        <Stack direction="row" gap={6}>
+          <Badge>neutral</Badge>
+          <Badge tone="success">success</Badge>
+          <Badge tone="warning">warning</Badge>
+        </Stack>
+        <Stack direction="row" gap={8}>
+          <Button>Primary</Button>
+          <Button variant="ghost">Ghost</Button>
+        </Stack>
+      </Stack>
     </Card>
   )
 }

@@ -1,6 +1,7 @@
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { EXAMPLES } from './examples'
 import { useSandbox, type PreviewError, type PropsInfo } from './host/useSandbox'
+import { DEFAULT_THEME, parseTheme, THEME_PRESETS, type ResolvedTheme, type Theme } from './theme'
 
 // CodeMirror is the largest dependency; load it after the shell renders.
 const CodeEditor = lazy(() => import('./editor/CodeEditor').then((m) => ({ default: m.CodeEditor })))
@@ -9,7 +10,19 @@ export default function App() {
   const [source, setSource] = useState(EXAMPLES[0].code)
   const [propsText, setPropsText] = useState('')
   const [exampleId, setExampleId] = useState(EXAMPLES[0].id)
-  const { frame, frameKey, status, error, propsInfo, reset, hasRender } = useSandbox(source, propsText)
+  const [themeText, setThemeText] = useState('')
+  const [tab, setTab] = useState<'props' | 'theme'>('props')
+
+  // Invalid theme JSON keeps the last valid theme applied.
+  const themeResult = useMemo(() => parseTheme(themeText), [themeText])
+  const [appliedTheme, setAppliedTheme] = useState<Theme>(DEFAULT_THEME)
+  const changeTheme = (text: string) => {
+    setThemeText(text)
+    const next = parseTheme(text)
+    if (next.ok) setAppliedTheme(next.theme)
+  }
+
+  const { frame, frameKey, status, error, propsInfo, reset, hasRender } = useSandbox(source, propsText, appliedTheme)
   const example = EXAMPLES.find((x) => x.id === exampleId)
 
   return (
@@ -50,6 +63,11 @@ export default function App() {
                   setExampleId(ex.id)
                   setSource(ex.code)
                   setPropsText('')
+                  // Each example starts from the default theme, so an invalid
+                  // example theme doesn't keep a previous example's colors.
+                  setAppliedTheme(DEFAULT_THEME)
+                  changeTheme(ex.theme ?? '')
+                  if (ex.theme) setTab('theme')
                 }
               }}
             >
@@ -91,7 +109,21 @@ export default function App() {
             sandbox="allow-scripts"
           />
           {error && <ErrorPanel error={error} keptPrevious={hasRender} />}
-          <PropsEditor value={propsText} onChange={setPropsText} info={propsInfo} />
+          <div className="panel">
+            <div className="tabs" role="tablist" aria-label="Preview inputs">
+              <button type="button" role="tab" aria-selected={tab === 'props'} onClick={() => setTab('props')}>
+                props
+              </button>
+              <button type="button" role="tab" aria-selected={tab === 'theme'} onClick={() => setTab('theme')}>
+                theme{!themeResult.ok && <span className="tab-alert"> ✕</span>}
+              </button>
+            </div>
+            {tab === 'props' ? (
+              <PropsEditor value={propsText} onChange={setPropsText} info={propsInfo} />
+            ) : (
+              <ThemeEditor value={themeText} onChange={changeTheme} result={themeResult} />
+            )}
+          </div>
         </section>
       </div>
     </div>
@@ -126,7 +158,7 @@ function PropsEditor({
   return (
     <div className="props-editor">
       <div className="props-head">
-        <label htmlFor="props-json">props (JSON)</label>
+        <label htmlFor="props-json">JSON</label>
         <span className="dim">
           {usingExample ? (info?.exampleProps ? 'using exampleProps' : 'no props') : 'custom'}
         </span>
@@ -149,6 +181,62 @@ function PropsEditor({
         onChange={(e) => onChange(e.target.value)}
         rows={5}
       />
+    </div>
+  )
+}
+
+function ThemeEditor({
+  value,
+  onChange,
+  result,
+}: {
+  value: string
+  onChange: (v: string) => void
+  result: ResolvedTheme
+}) {
+  const preset = THEME_PRESETS.find((p) => JSON.stringify(p.theme, null, 2) === value.trim() || (p.id === 'default' && value.trim() === ''))
+  return (
+    <div className="props-editor">
+      <div className="props-head">
+        <label htmlFor="theme-json">JSON</label>
+        <span className="dim">{value.trim() === '' ? 'default theme' : result.ok ? 'custom' : 'invalid, not applied'}</span>
+        <select
+          aria-label="Theme presets"
+          className="preset-select"
+          value={preset?.id ?? ''}
+          onChange={(e) => {
+            const p = THEME_PRESETS.find((x) => x.id === e.target.value)
+            if (p) onChange(p.id === 'default' ? '' : JSON.stringify(p.theme, null, 2))
+          }}
+        >
+          {!preset && <option value="">preset…</option>}
+          {THEME_PRESETS.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <textarea
+        id="theme-json"
+        spellCheck={false}
+        value={value}
+        placeholder={'{ "accent": "#2f8f6f", "radius": 6 }'}
+        onChange={(e) => onChange(e.target.value)}
+        rows={5}
+        aria-invalid={!result.ok}
+        aria-describedby="theme-help"
+      />
+      {result.ok ? (
+        <p id="theme-help" className="theme-help dim">
+          tokens: accent, surface, text (hex) · radius 0–24 · space 2–8 · fontScale 0.8–1.4
+        </p>
+      ) : (
+        <div id="theme-help" className="theme-issues" role="alert">
+          <pre>{result.issues.join('\n')}</pre>
+          <p className="dim">Keeping the last valid theme.</p>
+        </div>
+      )}
     </div>
   )
 }

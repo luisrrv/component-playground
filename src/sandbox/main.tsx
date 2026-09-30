@@ -14,6 +14,7 @@ import { evaluate, type ModuleMap } from '../runtime/evaluate'
 import { resolveProps } from '../runtime/contract'
 import { GUARD_NAME, LOOP_LIMIT_MS } from '../runtime/loopGuardConfig'
 import { HostMessage, type SandboxMessage } from '../protocol'
+import { DEFAULT_THEME, resolveTheme, themeToCssVars, type Theme } from '../theme'
 import { ErrorBoundary } from './ErrorBoundary'
 import { Committed } from './Committed'
 import './sandbox.css'
@@ -38,6 +39,15 @@ Object.defineProperty(window, GUARD_NAME, {
     }
   },
 })
+
+// Theme tokens become CSS variables on <html>. Each value is set on its own
+// with setProperty, so even a value that slipped past the schema couldn't add
+// another declaration.
+function applyTheme(theme: Theme) {
+  const style = document.documentElement.style
+  for (const [name, value] of Object.entries(themeToCssVars(theme))) style.setProperty(name, value)
+}
+applyTheme(DEFAULT_THEME)
 
 const root = createRoot(document.getElementById('root')!)
 let currentId: number | null = null
@@ -104,7 +114,10 @@ window.addEventListener('message', (event) => {
   const parsed = HostMessage.safeParse(event.data)
   if (!parsed.success) return
   if (parsed.data.type === 'render') render(parsed.data.id, parsed.data.code, parsed.data.props)
-  else if (parsed.data.type === 'ping') post({ type: 'pong', n: parsed.data.n })
+  else if (parsed.data.type === 'theme') {
+    const resolved = resolveTheme(parsed.data.theme)
+    if (resolved.ok) applyTheme(resolved.theme)
+  } else if (parsed.data.type === 'ping') post({ type: 'pong', n: parsed.data.n })
   else if (parsed.data.type === 'clear') {
     currentId = null
     root.render(null)

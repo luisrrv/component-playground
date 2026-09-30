@@ -36,7 +36,11 @@ function parseProps(text: string): { ok: true; value: unknown } | { ok: false; m
   }
 }
 
-export function useSandbox(source: string, propsText: string) {
+/**
+ * `theme` is the last valid set of theme overrides from the theme panel. The
+ * sandbox re-validates it before applying anything.
+ */
+export function useSandbox(source: string, propsText: string, theme: unknown = {}) {
   const frame = useRef<HTMLIFrameElement>(null)
   const ready = useRef(false)
   const latest = useRef<{ id: number; code: string; props: unknown } | null>(null)
@@ -49,6 +53,7 @@ export function useSandbox(source: string, propsText: string) {
   const [frameKey, setFrameKey] = useState(0)
   // Bumped by reset() so the same source recompiles after the preview is cleared.
   const [generation, setGeneration] = useState(0)
+  const themeRef = useRef(theme)
   const lastPong = useRef(0)
   const pingN = useRef(0)
 
@@ -104,6 +109,9 @@ export function useSandbox(source: string, propsText: string) {
       if (msg.type === 'ready') {
         ready.current = true
         lastPong.current = performance.now()
+        // A fresh iframe (first load or after a watchdog restart) starts with
+        // the default theme, so resend the current one before rendering.
+        frame.current?.contentWindow?.postMessage({ type: 'theme', theme: themeRef.current }, '*')
         send()
         return
       }
@@ -127,6 +135,12 @@ export function useSandbox(source: string, propsText: string) {
     window.addEventListener('message', onMessage)
     return () => window.removeEventListener('message', onMessage)
   }, [send])
+
+  useEffect(() => {
+    themeRef.current = theme
+    if (!ready.current) return
+    frame.current?.contentWindow?.postMessage({ type: 'theme', theme }, '*')
+  }, [theme])
 
   useEffect(() => {
     let cancelled = false

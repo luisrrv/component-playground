@@ -1,19 +1,54 @@
-/* The preview "canvas": a neutral light surface, separate from the host's dark UI. */
-html, body { margin: 0; background: #f4f4f2; color: #1a1a1a; }
-body { font: 15px/1.45 system-ui, sans-serif; padding: 24px; }
+/*
+ * The preview "canvas" and @kit/ui. Everything themeable reads a --kit-*
+ * variable set from validated theme tokens (see ../theme.ts); derived colors
+ * are mixed from those tokens so the theme stays small.
+ */
+:root {
+  --kit-border: color-mix(in srgb, var(--kit-text) 16%, var(--kit-surface));
+  --kit-muted: color-mix(in srgb, var(--kit-text) 62%, var(--kit-surface));
+  --kit-subtle: color-mix(in srgb, var(--kit-text) 7%, var(--kit-surface));
+  --kit-canvas: color-mix(in srgb, var(--kit-text) 5%, var(--kit-surface));
+}
+
+html, body { margin: 0; background: var(--kit-canvas); color: var(--kit-text); }
+body {
+  font: calc(15px * var(--kit-font-scale)) / 1.45 system-ui, sans-serif;
+  padding: calc(var(--kit-space) * 6);
+}
 
 /* @kit/ui */
-.kit-card { background: #fff; border: 1px solid #d9d9d6; border-radius: 6px; padding: 16px; max-width: 360px; }
-.kit-card-title { margin: 0 0 8px; font-size: 16px; font-weight: 600; }
+.kit-card {
+  background: var(--kit-surface);
+  border: 1px solid var(--kit-border);
+  border-radius: var(--kit-radius);
+  padding: calc(var(--kit-space) * 4);
+  max-width: 360px;
+}
+.kit-card-title { margin: 0 0 calc(var(--kit-space) * 2); font-size: 1.07em; font-weight: 600; }
 .kit-stack { display: flex; }
 .kit-text { margin: 0; }
-.kit-text-muted { color: #6b6b69; }
-.kit-button { font: inherit; padding: 6px 12px; border-radius: 4px; border: 1px solid transparent; cursor: pointer; }
-.kit-button-primary { background: #2f8f6f; color: #fff; }
-.kit-button-primary:hover { background: #267a5e; }
-.kit-button-ghost { background: transparent; border-color: #c9c9c6; color: #1a1a1a; }
-.kit-button-ghost:hover { background: #ececea; }
-.kit-button:focus-visible { outline: 2px solid #2f8f6f; outline-offset: 2px; }
-.kit-badge { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #ececea; color: #3a3a38; }
-.kit-badge-success { background: #dff3ea; color: #1f6b52; }
-.kit-badge-warning { background: #fbefd9; color: #7a5410; }
+.kit-text-muted { color: var(--kit-muted); }
+
+.kit-button {
+  font: inherit;
+  padding: calc(var(--kit-space) * 1.5) calc(var(--kit-space) * 3);
+  border-radius: calc(var(--kit-radius) * 0.7);
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+.kit-button-primary { background: var(--kit-accent); color: var(--kit-on-accent); }
+.kit-button-primary:hover { background: color-mix(in srgb, var(--kit-accent) 86%, var(--kit-text)); }
+.kit-button-ghost { background: transparent; border-color: var(--kit-border); color: var(--kit-text); }
+.kit-button-ghost:hover { background: var(--kit-subtle); }
+.kit-button:focus-visible { outline: 2px solid var(--kit-accent); outline-offset: 2px; }
+
+.kit-badge {
+  display: inline-block;
+  font-size: 0.8em;
+  padding: 2px calc(var(--kit-space) * 2);
+  border-radius: 999px;
+  background: var(--kit-subtle);
+  color: var(--kit-muted);
+}
+.kit-badge-success { background: color-mix(in srgb, #2f9e6f 18%, var(--kit-surface)); color: color-mix(in srgb, #1f6b52 70%, var(--kit-text)); }
+.kit-badge-warning { background: color-mix(in srgb, #e0a030 22%, var(--kit-surface)); color: color-mix(in srgb, #7a5410 70%, var(--kit-text)); }

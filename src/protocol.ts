@@ -22,6 +22,9 @@ export const HostMessage = z.discriminatedUnion('type', [
   // Clear the preview, e.g. when switching examples, so "last version that
   // worked" never shows a different component.
   z.object({ type: z.literal('clear') }),
+  // Theme overrides from the theme panel. Checked again in the sandbox
+  // (resolveTheme) before any value reaches the page.
+  z.object({ type: z.literal('theme'), theme: z.unknown() }),
   // Watchdog heartbeat; a sandbox stuck in a loop can't answer.
   z.object({ type: z.literal('ping'), n: z.number().int() }),
 ])
