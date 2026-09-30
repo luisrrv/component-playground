@@ -1,4 +1,5 @@
 import { lazy, Suspense, useMemo, useState } from 'react'
+import { AiPanel, ReviewView, type Proposal } from './ai/AiPanel'
 import { EXAMPLES } from './examples'
 import { useSandbox, type PreviewError, type PropsInfo } from './host/useSandbox'
 import { DEFAULT_THEME, parseTheme, THEME_PRESETS, type ResolvedTheme, type Theme } from './theme'
@@ -23,6 +24,24 @@ export default function App() {
   }
 
   const { frame, frameKey, status, error, propsInfo, reset, hasRender } = useSandbox(source, propsText, appliedTheme)
+  const [aiOpen, setAiOpen] = useState(false)
+  // A pending AI proposal puts the editor in review mode.
+  const [proposal, setProposal] = useState<Proposal | null>(null)
+
+  const selectExample = (id: string) => {
+    const ex = EXAMPLES.find((x) => x.id === id)
+    if (!ex) return
+    setProposal(null)
+    reset()
+    setExampleId(ex.id)
+    setSource(ex.code)
+    setPropsText('')
+    // Each example starts from the default theme, so an invalid
+    // example theme doesn't keep a previous example's colors.
+    setAppliedTheme(DEFAULT_THEME)
+    changeTheme(ex.theme ?? '')
+    if (ex.theme) setTab('theme')
+  }
   const example = EXAMPLES.find((x) => x.id === exampleId)
 
   return (
@@ -52,24 +71,24 @@ export default function App() {
       <div className="workspace">
         <section className="pane" aria-label="Editor">
           <div className="pane-head">
-            <span>component.tsx</span>
+            <span className="pane-title">
+              component.tsx
+              <button
+                type="button"
+                className={aiOpen ? 'ai-toggle on' : 'ai-toggle'}
+                aria-expanded={aiOpen}
+                onClick={() => {
+                  setAiOpen(!aiOpen)
+                  setProposal(null)
+                }}
+              >
+                ✦ ai edit
+              </button>
+            </span>
             <select
               aria-label="Examples"
               value={exampleId}
-              onChange={(e) => {
-                const ex = EXAMPLES.find((x) => x.id === e.target.value)
-                if (ex) {
-                  reset()
-                  setExampleId(ex.id)
-                  setSource(ex.code)
-                  setPropsText('')
-                  // Each example starts from the default theme, so an invalid
-                  // example theme doesn't keep a previous example's colors.
-                  setAppliedTheme(DEFAULT_THEME)
-                  changeTheme(ex.theme ?? '')
-                  if (ex.theme) setTab('theme')
-                }
-              }}
+              onChange={(e) => selectExample(e.target.value)}
             >
               <optgroup label="Works">
                 {EXAMPLES.filter((x) => x.group === 'works').map((ex) => (
@@ -87,10 +106,32 @@ export default function App() {
               </optgroup>
             </select>
           </div>
-          {example && example.code === source && <p className="explains">{example.explains}</p>}
-          <Suspense fallback={<pre className="editor editor-fallback">{source}</pre>}>
-            <CodeEditor value={source} onChange={setSource} />
-          </Suspense>
+          {aiOpen && (
+            <AiPanel
+              source={source}
+              hidden={proposal !== null}
+              onProposal={setProposal}
+              onLoadDemoBase={() => selectExample('profile-card')}
+            />
+          )}
+          {proposal ? (
+            <ReviewView
+              proposal={proposal}
+              source={source}
+              onAccept={() => {
+                setSource(proposal.code)
+                setProposal(null)
+              }}
+              onReject={() => setProposal(null)}
+            />
+          ) : (
+            <>
+              {example && example.code === source && <p className="explains">{example.explains}</p>}
+              <Suspense fallback={<pre className="editor editor-fallback">{source}</pre>}>
+                <CodeEditor value={source} onChange={setSource} />
+              </Suspense>
+            </>
+          )}
         </section>
 
         <section className="pane" aria-label="Preview">

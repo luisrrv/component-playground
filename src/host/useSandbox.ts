@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { SandboxMessage, type ErrorPhase } from '../protocol'
+import { loadPipeline } from './pipeline'
 
 export type PreviewError = {
   phase: ErrorPhase
@@ -14,8 +15,6 @@ const DEBOUNCE_MS = 300
 const PING_EVERY_MS = 1000
 const TIMEOUT_MS = 3000
 
-let pipeline: Promise<typeof import('../runtime/pipeline')> | null = null
-const loadPipeline = () => (pipeline ??= import('../runtime/pipeline'))
 
 /**
  * Compiles in the host and sends the result to the sandbox iframe.
