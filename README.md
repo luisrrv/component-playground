@@ -2,7 +2,7 @@
 
 Write a React component and watch it render inside a sandbox that assumes the code is untrusted.
 
-**Live:** [playground.lrod.dev](https://playground.lrod.dev) · **Stack:** React · TypeScript · Vite · Sucrase · Zod · CodeMirror
+**Live:** [playground.lrod.dev](https://playground.lrod.dev) · **Write-up:** [Running untrusted React components in the browser](https://lrod.dev/notes/running-untrusted-components/) · **Stack:** React · TypeScript · Vite · Sucrase · Zod · CodeMirror
 
 ![component-playground](docs/screenshot.png)
 
