@@ -2,42 +2,25 @@
 import { resolve } from 'node:path'
 import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vite'
+import { HOST_CSP, SANDBOX_CSP } from './src/csp.ts'
 
-/**
- * Strict CSP for the sandbox document, added only to production builds
- * (Vite's dev server needs inline scripts and a websocket for HMR).
- *
- * - script-src 'unsafe-eval': user code runs through `new Function`.
- * - connect-src 'none': no fetch/XHR/WebSocket, so user code can't phone home.
- * - no frame/object/form/base: nothing to embed, submit or redirect.
- */
-export const SANDBOX_CSP = [
-  "default-src 'none'",
-  "script-src 'self' 'unsafe-eval'",
-  "style-src 'self' 'unsafe-inline'",
-  'img-src data: blob:',
-  "font-src 'none'",
-  "connect-src 'none'",
-  "form-action 'none'",
-  "base-uri 'none'",
-].join('; ')
-
-function sandboxCsp(): Plugin {
+/** Adds each page's CSP as a <meta> tag, in production builds only (see src/csp.ts). */
+function csp(): Plugin {
   return {
-    name: 'sandbox-csp',
+    name: 'csp',
     apply: 'build',
     transformIndexHtml(html, ctx) {
-      if (!ctx.filename.endsWith('sandbox.html')) return html
-      return html.replace(
-        '<!-- %SANDBOX_CSP% -->',
-        `<meta http-equiv="Content-Security-Policy" content="${SANDBOX_CSP}" />`,
-      )
+      const policy = ctx.filename.endsWith('sandbox.html') ? SANDBOX_CSP : HOST_CSP
+      const tag = `<meta http-equiv="Content-Security-Policy" content="${policy}" />`
+      const marker = ctx.filename.endsWith('sandbox.html') ? '<!-- %SANDBOX_CSP% -->' : '<!-- %HOST_CSP% -->'
+      if (!html.includes(marker)) throw new Error(`CSP marker missing in ${ctx.filename}`)
+      return html.replace(marker, tag)
     },
   }
 }
 
 export default defineConfig({
-  plugins: [react(), sandboxCsp()],
+  plugins: [react(), csp()],
   build: {
     rollupOptions: {
       input: {

@@ -63,8 +63,8 @@ export default function App() {
         <p>
           Write a React component and it renders in a sandbox that assumes the code is untrusted: compiled in the
           browser, limited to an import allowlist, props checked against a schema, isolated in an iframe with a strict
-          CSP, and recovered from crashes and infinite loops. Pick a <strong>✕</strong> example to watch each safeguard
-          catch something.
+          CSP, and recovered from crashes and infinite loops. Theme tokens, slots and AI edits go through the same
+          checks. Pick a <strong>✕</strong> example to watch each safeguard catch something.
         </p>
       </div>
 

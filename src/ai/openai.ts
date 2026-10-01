@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { EDIT_INSTRUCTIONS, editInput } from './prompt'
 import { ProviderError, type EditProposal, type EditProvider, type EditRequest } from './provider'
 
+// Must be listed in PROVIDER_ORIGINS (src/csp.ts), or the host CSP blocks it.
 const ORIGIN = 'https://api.openai.com'
 
 /** The model's answer, validated like any other untrusted input. */
